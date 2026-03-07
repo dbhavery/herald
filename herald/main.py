@@ -61,8 +61,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -86,7 +85,7 @@ def chat(req: ChatRequest):
         return result
     except Exception as exc:
         logger.error("Chat error: %s", exc, exc_info=True)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/api/conversations")
@@ -119,7 +118,7 @@ def copilot_suggest(req: CopilotSuggestRequest):
         raise HTTPException(status_code=404, detail=str(exc))
     except Exception as exc:
         logger.error("Copilot error: %s", exc, exc_info=True)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.post("/api/copilot/accept")
@@ -184,7 +183,7 @@ def ticket_create(req: TicketCreate):
         return result
     except Exception as exc:
         logger.error("Ticket creation error: %s", exc, exc_info=True)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.patch("/api/tickets/{ticket_id}")

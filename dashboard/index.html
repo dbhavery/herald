@@ -271,6 +271,11 @@ tr:hover td{background:rgba(255,255,255,.02)}
 <script>
 const API = '';
 
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
 // Navigation
 document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', () => {
@@ -289,6 +294,7 @@ async function api(path, opts = {}) {
     headers: { 'Content-Type': 'application/json' },
     ...opts
   });
+  if (!res.ok) throw new Error(`API ${opts.method || 'GET'} ${path} failed: ${res.status}`);
   return res.json();
 }
 
@@ -361,9 +367,9 @@ async function loadOverview() {
   `;
   document.getElementById('overview-convos').innerHTML = convos.slice(0, 8).map(c => `
     <tr class="clickable" onclick="viewConversation('${c.id}')">
-      <td>${c.customer_name || '-'}</td><td>${c.subject || '-'}</td>
+      <td>${escapeHtml(c.customer_name) || '-'}</td><td>${escapeHtml(c.subject) || '-'}</td>
       <td>${statusBadge(c.status)}</td><td>${sentimentDisplay(c.sentiment_score)}</td>
-      <td>${c.assigned_to || '<span style="color:var(--text3)">Unassigned</span>'}</td>
+      <td>${c.assigned_to ? escapeHtml(c.assigned_to) : '<span style="color:var(--text3)">Unassigned</span>'}</td>
     </tr>
   `).join('');
 
@@ -382,10 +388,10 @@ async function loadConversations() {
   const convos = await api(url);
   document.getElementById('conv-table').innerHTML = convos.map(c => `
     <tr class="clickable" onclick="viewConversation('${c.id}')">
-      <td>${c.customer_name || '-'}</td><td>${c.subject || '-'}</td>
-      <td>${c.channel}</td><td>${statusBadge(c.status)}</td>
+      <td>${escapeHtml(c.customer_name) || '-'}</td><td>${escapeHtml(c.subject) || '-'}</td>
+      <td>${escapeHtml(c.channel)}</td><td>${statusBadge(c.status)}</td>
       <td>${sentimentDisplay(c.sentiment_score)}</td>
-      <td>${c.assigned_to || '-'}</td>
+      <td>${escapeHtml(c.assigned_to) || '-'}</td>
     </tr>
   `).join('');
 }
@@ -398,15 +404,15 @@ async function viewConversation(id) {
   document.getElementById('conv-detail-view').style.display = 'block';
   document.getElementById('conv-thread').innerHTML = `
     <div class="thread-header">
-      <h3>${conv.subject || 'Conversation'}</h3>
-      <div class="meta">${statusBadge(conv.status)} &nbsp; ${conv.customer_name || ''} &nbsp; ${sentimentDisplay(conv.sentiment_score)} &nbsp; ${conv.assigned_to ? 'Assigned: '+conv.assigned_to : 'Unassigned'}</div>
+      <h3>${escapeHtml(conv.subject) || 'Conversation'}</h3>
+      <div class="meta">${statusBadge(conv.status)} &nbsp; ${escapeHtml(conv.customer_name) || ''} &nbsp; ${sentimentDisplay(conv.sentiment_score)} &nbsp; ${conv.assigned_to ? 'Assigned: '+escapeHtml(conv.assigned_to) : 'Unassigned'}</div>
     </div>
     ${conv.messages.map(m => `
       <div class="msg">
         <div class="msg-avatar ${m.role}">${m.role[0].toUpperCase()}</div>
         <div class="msg-body">
           <div class="msg-role ${m.role}">${m.role === 'customer' ? 'Customer' : m.role === 'bot' ? 'Herald Bot' : 'Agent'}</div>
-          <div class="msg-text">${m.content}</div>
+          <div class="msg-text">${escapeHtml(m.content)}</div>
           <div class="msg-time">${timeAgo(m.created_at)}</div>
         </div>
       </div>
@@ -430,7 +436,7 @@ async function sendReply() {
       <div class="msg-avatar agent">A</div>
       <div class="msg-body">
         <div class="msg-role agent">Agent</div>
-        <div class="msg-text">${input.value}</div>
+        <div class="msg-text">${escapeHtml(input.value)}</div>
         <div class="msg-time">just now</div>
       </div>
     </div>
@@ -447,8 +453,8 @@ async function loadCustomers() {
   const custs = await api(url);
   document.getElementById('cust-table').innerHTML = custs.map(c => `
     <tr class="clickable" onclick="viewCustomer('${c.id}')">
-      <td><strong>${c.name}</strong><br><span style="color:var(--text2);font-size:12px">${c.email}</span></td>
-      <td>${c.company || '-'}</td>
+      <td><strong>${escapeHtml(c.name)}</strong><br><span style="color:var(--text2);font-size:12px">${escapeHtml(c.email)}</span></td>
+      <td>${escapeHtml(c.company) || '-'}</td>
       <td>${planBadge(c.plan)}</td>
       <td>${healthBar(c.health_score)}</td>
       <td>${riskBadge(c.churn_risk)}</td>
@@ -463,9 +469,9 @@ async function viewCustomer(id) {
   document.getElementById('cust-detail-view').style.display = 'block';
   document.getElementById('cust-detail').innerHTML = `
     <div class="detail-panel">
-      <h3>${cust.name}</h3>
-      <div class="detail-row"><span class="detail-label">Email</span><span>${cust.email}</span></div>
-      <div class="detail-row"><span class="detail-label">Company</span><span>${cust.company || '-'}</span></div>
+      <h3>${escapeHtml(cust.name)}</h3>
+      <div class="detail-row"><span class="detail-label">Email</span><span>${escapeHtml(cust.email)}</span></div>
+      <div class="detail-row"><span class="detail-label">Company</span><span>${escapeHtml(cust.company) || '-'}</span></div>
       <div class="detail-row"><span class="detail-label">Plan</span><span>${planBadge(cust.plan)}</span></div>
       <div class="detail-row"><span class="detail-label">Health Score</span><span>${healthBar(cust.health_score)}</span></div>
       <div class="detail-row"><span class="detail-label">Churn Risk</span><span>${riskBadge(cust.churn_risk)}</span></div>
@@ -477,14 +483,14 @@ async function viewCustomer(id) {
     <div class="table-wrap"><table><thead><tr><th>Subject</th><th>Status</th><th>Sentiment</th></tr></thead><tbody>
       ${(cust.recent_conversations||[]).map(c => `
         <tr class="clickable" onclick="document.querySelector('[data-page=conversations]').click();setTimeout(()=>viewConversation('${c.id}'),100)">
-          <td>${c.subject || '-'}</td><td>${statusBadge(c.status)}</td><td>${sentimentDisplay(c.sentiment_score)}</td>
+          <td>${escapeHtml(c.subject) || '-'}</td><td>${statusBadge(c.status)}</td><td>${sentimentDisplay(c.sentiment_score)}</td>
         </tr>
       `).join('') || '<tr><td colspan="3" style="color:var(--text3)">No conversations</td></tr>'}
     </tbody></table></div>
     <div class="section-title">Open Tickets</div>
     <div class="table-wrap"><table><thead><tr><th>Subject</th><th>Priority</th><th>Status</th></tr></thead><tbody>
       ${(cust.open_tickets||[]).map(t => `
-        <tr><td>${t.subject}</td><td>${priorityBadge(t.priority)}</td><td>${statusBadge(t.status)}</td></tr>
+        <tr><td>${escapeHtml(t.subject)}</td><td>${priorityBadge(t.priority)}</td><td>${statusBadge(t.status)}</td></tr>
       `).join('') || '<tr><td colspan="3" style="color:var(--text3)">No open tickets</td></tr>'}
     </tbody></table></div>
   `;
@@ -512,12 +518,12 @@ async function loadTickets() {
 
   document.getElementById('tkt-table').innerHTML = tickets.map(t => `
     <tr class="clickable" onclick="viewTicket('${t.id}')">
-      <td>${t.subject}</td>
-      <td>${custMap[t.customer_id] || t.customer_id}</td>
+      <td>${escapeHtml(t.subject)}</td>
+      <td>${escapeHtml(custMap[t.customer_id] || t.customer_id)}</td>
       <td>${statusBadge(t.status)}</td>
       <td>${priorityBadge(t.priority)}</td>
-      <td>${t.category ? badge(t.category, 'blue') : '-'}</td>
-      <td>${t.assigned_to || '-'}</td>
+      <td>${t.category ? badge(escapeHtml(t.category), 'blue') : '-'}</td>
+      <td>${escapeHtml(t.assigned_to) || '-'}</td>
       <td>${timeAgo(t.updated_at)}</td>
     </tr>
   `).join('');
@@ -530,13 +536,13 @@ async function viewTicket(id) {
   document.getElementById('tkt-detail').style.display = 'block';
   document.getElementById('tkt-detail').innerHTML = `
     <div class="detail-panel">
-      <h3>${ticket.subject}</h3>
+      <h3>${escapeHtml(ticket.subject)}</h3>
       <div class="detail-row"><span class="detail-label">Status</span><span>${statusBadge(ticket.status)}</span></div>
       <div class="detail-row"><span class="detail-label">Priority</span><span>${priorityBadge(ticket.priority)}</span></div>
-      <div class="detail-row"><span class="detail-label">Category</span><span>${ticket.category ? badge(ticket.category,'blue') : '-'}</span></div>
-      <div class="detail-row"><span class="detail-label">Assigned To</span><span>${ticket.assigned_to || 'Unassigned'}</span></div>
-      <div class="detail-row"><span class="detail-label">Description</span><span>${ticket.description || '-'}</span></div>
-      ${ticket.resolution_notes ? `<div class="detail-row"><span class="detail-label">Resolution</span><span>${ticket.resolution_notes}</span></div>` : ''}
+      <div class="detail-row"><span class="detail-label">Category</span><span>${ticket.category ? badge(escapeHtml(ticket.category),'blue') : '-'}</span></div>
+      <div class="detail-row"><span class="detail-label">Assigned To</span><span>${escapeHtml(ticket.assigned_to) || 'Unassigned'}</span></div>
+      <div class="detail-row"><span class="detail-label">Description</span><span>${escapeHtml(ticket.description) || '-'}</span></div>
+      ${ticket.resolution_notes ? `<div class="detail-row"><span class="detail-label">Resolution</span><span>${escapeHtml(ticket.resolution_notes)}</span></div>` : ''}
       <div style="margin-top:12px;display:flex;gap:8px">
         <select id="tkt-update-status"><option value="">Change Status</option><option value="open">Open</option><option value="in_progress">In Progress</option><option value="waiting">Waiting</option><option value="resolved">Resolved</option><option value="closed">Closed</option></select>
         <button class="btn btn-primary btn-sm" onclick="updateTicket('${ticket.id}')">Update</button>
@@ -557,7 +563,7 @@ async function loadCopilot() {
   const convos = await api('/api/conversations?status=active');
   const select = document.getElementById('copilot-conv-select');
   select.innerHTML = '<option value="">Select a conversation...</option>' +
-    convos.map(c => `<option value="${c.id}">${c.customer_name || 'Unknown'}: ${c.subject || 'No subject'}</option>`).join('');
+    convos.map(c => `<option value="${c.id}">${escapeHtml(c.customer_name) || 'Unknown'}: ${escapeHtml(c.subject) || 'No subject'}</option>`).join('');
 }
 
 async function getSuggestions() {
@@ -570,14 +576,14 @@ async function getSuggestions() {
   if (result.context_used && result.context_used.length) {
     document.getElementById('copilot-context').innerHTML = `
       <div class="detail-panel"><h3>Context Used</h3>
-        ${result.context_used.map(c => `<span class="badge badge-blue" style="margin:2px">${c}</span>`).join('')}
+        ${result.context_used.map(c => `<span class="badge badge-blue" style="margin:2px">${escapeHtml(c)}</span>`).join('')}
       </div>
     `;
   }
 
   document.getElementById('copilot-suggestions').innerHTML = (result.suggestions || []).map(s => `
     <div class="suggestion-card">
-      <div class="suggestion-text">${s.suggestion}</div>
+      <div class="suggestion-text">${escapeHtml(s.suggestion)}</div>
       <div class="suggestion-actions">
         ${s.used ? '<span class="badge badge-green">Used</span>' :
           `<button class="btn btn-success btn-sm" onclick="acceptSuggestion('${s.id}', this)">Use</button>`}
