@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Herald — Customer Operations</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--border:#30363d;
+  --text:#e6edf3;--text2:#8b949e;--text3:#484f58;
+  --accent:#58a6ff;--accent2:#1f6feb;
+  --green:#3fb950;--green-bg:rgba(63,185,80,.15);
+  --yellow:#d29922;--yellow-bg:rgba(210,153,34,.15);
+  --red:#f85149;--red-bg:rgba(248,81,73,.15);
+  --purple:#bc8cff;--purple-bg:rgba(188,140,255,.15);
+  --orange:#f0883e;
+  --radius:8px;--radius-lg:12px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden}
+a{color:var(--accent);text-decoration:none}
+button{cursor:pointer;font-family:inherit}
+input,select,textarea{font-family:inherit;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-size:14px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+
+/* Sidebar */
+.sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:20px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:20px;font-weight:700;color:var(--accent)}
+.sidebar-header p{font-size:11px;color:var(--text2);margin-top:4px}
+.nav{flex:1;padding:12px 0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;color:var(--text2);font-size:14px;cursor:pointer;transition:all .15s}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:rgba(88,166,255,.1);color:var(--accent);border-right:2px solid var(--accent)}
+.nav-icon{width:18px;text-align:center;font-size:15px}
+
+/* Main content */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:56px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;flex-shrink:0}
+.topbar h2{font-size:18px;font-weight:600}
+.topbar .spacer{flex:1}
+.topbar .status-dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
+.content{flex:1;overflow-y:auto;padding:24px}
+
+/* Pages */
+.page{display:none}
+.page.active{display:block}
+
+/* Cards */
+.stat-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px}
+.stat-card .label{font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.stat-card .value{font-size:28px;font-weight:700}
+.stat-card .sub{font-size:12px;color:var(--text2);margin-top:4px}
+
+/* Tables */
+.table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:12px 16px;font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);background:var(--bg3)}
+td{padding:12px 16px;border-bottom:1px solid var(--border);font-size:14px}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.clickable{cursor:pointer}
+
+/* Badges */
+.badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:600;text-transform:uppercase}
+.badge-green{background:var(--green-bg);color:var(--green)}
+.badge-yellow{background:var(--yellow-bg);color:var(--yellow)}
+.badge-red{background:var(--red-bg);color:var(--red)}
+.badge-purple{background:var(--purple-bg);color:var(--purple)}
+.badge-blue{background:rgba(88,166,255,.15);color:var(--accent)}
+
+/* Health bar */
+.health-bar{width:80px;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:8px}
+.health-bar-fill{height:100%;border-radius:3px;transition:width .3s}
+
+/* Conversation thread */
+.thread{max-width:700px}
+.thread-header{margin-bottom:20px}
+.thread-header h3{font-size:18px;margin-bottom:4px}
+.thread-header .meta{font-size:13px;color:var(--text2)}
+.msg{margin-bottom:12px;display:flex;gap:12px}
+.msg-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;margin-top:4px}
+.msg-avatar.customer{background:var(--accent2);color:#fff}
+.msg-avatar.bot{background:var(--purple-bg);color:var(--purple)}
+.msg-avatar.agent{background:var(--green-bg);color:var(--green)}
+.msg-body{flex:1}
+.msg-role{font-size:12px;font-weight:600;margin-bottom:4px}
+.msg-role.customer{color:var(--accent)}
+.msg-role.bot{color:var(--purple)}
+.msg-role.agent{color:var(--green)}
+.msg-text{font-size:14px;line-height:1.5;color:var(--text)}
+.msg-time{font-size:11px;color:var(--text3);margin-top:4px}
+
+/* Detail panels */
+.detail-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px}
+.detail-panel h3{font-size:16px;margin-bottom:12px}
+.detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px}
+.detail-row:last-child{border-bottom:none}
+.detail-label{color:var(--text2)}
+
+/* Filters */
+.filters{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.filters select,.filters input{height:36px;font-size:13px}
+
+/* Copilot */
+.suggestion-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.suggestion-text{flex:1;font-size:14px;line-height:1.5}
+.suggestion-actions{flex-shrink:0}
+
+/* Buttons */
+.btn{padding:8px 16px;border-radius:var(--radius);border:1px solid var(--border);font-size:13px;font-weight:500;transition:all .15s}
+.btn-primary{background:var(--accent2);border-color:var(--accent2);color:#fff}
+.btn-primary:hover{background:var(--accent)}
+.btn-sm{padding:4px 12px;font-size:12px}
+.btn-success{background:rgba(63,185,80,.2);border-color:var(--green);color:var(--green)}
+
+/* Charts (simple CSS) */
+.chart-container{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px}
+.chart-container h3{margin-bottom:16px;font-size:16px}
+.bar-chart{display:flex;align-items:flex-end;gap:4px;height:150px}
+.bar{flex:1;background:var(--accent2);border-radius:3px 3px 0 0;transition:height .3s;min-width:8px;position:relative}
+.bar:hover{background:var(--accent)}
+.bar-label{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--text3);white-space:nowrap}
+.donut-chart{display:flex;align-items:center;gap:24px}
+.donut{width:120px;height:120px;border-radius:50%;position:relative}
+.donut-legend{display:flex;flex-direction:column;gap:8px}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:13px}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+
+/* Metrics grid */
+.metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px}
+.metric-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
+.metric-value{font-size:24px;font-weight:700;margin-bottom:4px}
+.metric-label{font-size:12px;color:var(--text2)}
+
+/* Back button */
+.back-btn{display:inline-flex;align-items:center;gap:6px;color:var(--text2);font-size:13px;cursor:pointer;margin-bottom:16px;padding:4px 0}
+.back-btn:hover{color:var(--accent)}
+
+/* Reply input */
+.reply-box{display:flex;gap:8px;margin-top:16px;max-width:700px}
+.reply-box input{flex:1}
+
+/* Sections */
+.section-title{font-size:16px;font-weight:600;margin:24px 0 12px}
+.section-title:first-child{margin-top:0}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1>Herald</h1>
+    <p>Customer Operations</p>
+  </div>
+  <nav class="nav">
+    <div class="nav-item active" data-page="overview"><span class="nav-icon">&#9632;</span> Overview</div>
+    <div class="nav-item" data-page="conversations"><span class="nav-icon">&#9993;</span> Conversations</div>
+    <div class="nav-item" data-page="customers"><span class="nav-icon">&#9786;</span> Customers</div>
+    <div class="nav-item" data-page="tickets"><span class="nav-icon">&#9998;</span> Tickets</div>
+    <div class="nav-item" data-page="copilot"><span class="nav-icon">&#9733;</span> Copilot</div>
+    <div class="nav-item" data-page="analytics"><span class="nav-icon">&#9776;</span> Analytics</div>
+  </nav>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <h2 id="page-title">Overview</h2>
+    <div class="spacer"></div>
+    <span class="status-dot"></span>
+    <span style="font-size:13px;color:var(--text2)">System Online</span>
+  </div>
+  <div class="content" id="content">
+
+    <!-- Overview Page -->
+    <div class="page active" id="page-overview">
+      <div class="stat-cards" id="overview-stats"></div>
+      <div class="section-title">Recent Conversations</div>
+      <div class="table-wrap"><table><thead><tr>
+        <th>Customer</th><th>Subject</th><th>Status</th><th>Sentiment</th><th>Assigned To</th>
+      </tr></thead><tbody id="overview-convos"></tbody></table></div>
+      <div class="section-title" style="margin-top:24px">Open Tickets by Priority</div>
+      <div id="overview-tickets" class="metrics-grid"></div>
+    </div>
+
+    <!-- Conversations Page -->
+    <div class="page" id="page-conversations">
+      <div id="conv-list-view">
+        <div class="filters">
+          <select id="conv-status-filter"><option value="">All Statuses</option><option value="active">Active</option><option value="waiting">Waiting</option><option value="resolved">Resolved</option><option value="escalated">Escalated</option></select>
+        </div>
+        <div class="table-wrap"><table><thead><tr>
+          <th>Customer</th><th>Subject</th><th>Channel</th><th>Status</th><th>Sentiment</th><th>Assigned</th>
+        </tr></thead><tbody id="conv-table"></tbody></table></div>
+      </div>
+      <div id="conv-detail-view" style="display:none">
+        <div class="back-btn" onclick="showConvList()">&#8592; Back to conversations</div>
+        <div class="thread" id="conv-thread"></div>
+        <div class="reply-box">
+          <input type="text" id="reply-input" placeholder="Type a reply as agent...">
+          <button class="btn btn-primary" onclick="sendReply()">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Customers Page -->
+    <div class="page" id="page-customers">
+      <div id="cust-list-view">
+        <div class="filters">
+          <select id="cust-plan-filter"><option value="">All Plans</option><option value="free">Free</option><option value="starter">Starter</option><option value="pro">Pro</option><option value="enterprise">Enterprise</option></select>
+          <select id="cust-risk-filter"><option value="">All Risk Levels</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select>
+        </div>
+        <div class="table-wrap"><table><thead><tr>
+          <th>Name</th><th>Company</th><th>Plan</th><th>Health</th><th>Churn Risk</th><th>Last Active</th>
+        </tr></thead><tbody id="cust-table"></tbody></table></div>
+      </div>
+      <div id="cust-detail-view" style="display:none">
+        <div class="back-btn" onclick="showCustList()">&#8592; Back to customers</div>
+        <div id="cust-detail"></div>
+      </div>
+    </div>
+
+    <!-- Tickets Page -->
+    <div class="page" id="page-tickets">
+      <div class="filters">
+        <select id="tkt-status-filter"><option value="">All Statuses</option><option value="open">Open</option><option value="in_progress">In Progress</option><option value="waiting">Waiting</option><option value="resolved">Resolved</option><option value="closed">Closed</option></select>
+        <select id="tkt-priority-filter"><option value="">All Priorities</option><option value="urgent">Urgent</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>
+        <select id="tkt-category-filter"><option value="">All Categories</option><option value="bug">Bug</option><option value="feature">Feature</option><option value="billing">Billing</option><option value="technical">Technical</option><option value="general">General</option></select>
+      </div>
+      <div class="table-wrap"><table><thead><tr>
+        <th>Subject</th><th>Customer</th><th>Status</th><th>Priority</th><th>Category</th><th>Assigned</th><th>Updated</th>
+      </tr></thead><tbody id="tkt-table"></tbody></table></div>
+      <div id="tkt-detail" style="display:none;margin-top:16px"></div>
+    </div>
+
+    <!-- Copilot Page -->
+    <div class="page" id="page-copilot">
+      <div class="filters">
+        <select id="copilot-conv-select" style="min-width:300px"><option value="">Select a conversation...</option></select>
+        <button class="btn btn-primary" onclick="getSuggestions()">Get Suggestions</button>
+      </div>
+      <div id="copilot-context" style="margin-bottom:16px"></div>
+      <div id="copilot-suggestions"></div>
+    </div>
+
+    <!-- Analytics Page -->
+    <div class="page" id="page-analytics">
+      <div class="stat-cards" id="analytics-stats"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="chart-container">
+          <h3>Sentiment Trend (30 days)</h3>
+          <div class="bar-chart" id="sentiment-chart"></div>
+        </div>
+        <div class="chart-container">
+          <h3>Churn Risk Distribution</h3>
+          <div class="donut-chart" id="churn-chart"></div>
+        </div>
+      </div>
+      <div class="chart-container">
+        <h3>Resolution Time by Category</h3>
+        <div id="resolution-stats"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const API = '';
+
+// Navigation
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    item.classList.add('active');
+    const page = item.dataset.page;
+    document.getElementById('page-' + page).classList.add('active');
+    document.getElementById('page-title').textContent = item.textContent.trim();
+    loadPage(page);
+  });
+});
+
+async function api(path, opts = {}) {
+  const res = await fetch(API + path, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts
+  });
+  return res.json();
+}
+
+function badge(text, color) {
+  return `<span class="badge badge-${color}">${text}</span>`;
+}
+
+function statusBadge(s) {
+  const m = {active:'blue',waiting:'yellow',resolved:'green',escalated:'red',open:'blue',in_progress:'yellow',closed:'purple'};
+  return badge(s, m[s] || 'blue');
+}
+
+function priorityBadge(p) {
+  const m = {urgent:'red',high:'red',medium:'yellow',low:'green'};
+  return badge(p, m[p] || 'blue');
+}
+
+function riskBadge(r) {
+  const m = {high:'red',medium:'yellow',low:'green'};
+  return badge(r, m[r] || 'green');
+}
+
+function planBadge(p) {
+  const m = {enterprise:'purple',pro:'blue',starter:'yellow',free:'green'};
+  return badge(p, m[p] || 'blue');
+}
+
+function healthBar(score) {
+  let color = score >= 70 ? 'var(--green)' : score >= 40 ? 'var(--yellow)' : 'var(--red)';
+  return `${Math.round(score)}<span class="health-bar"><span class="health-bar-fill" style="width:${score}%;background:${color}"></span></span>`;
+}
+
+function sentimentDisplay(s) {
+  if (s == null) return '-';
+  let color = s > 0.2 ? 'var(--green)' : s < -0.2 ? 'var(--red)' : 'var(--text2)';
+  return `<span style="color:${color}">${s > 0 ? '+' : ''}${s.toFixed(2)}</span>`;
+}
+
+function timeAgo(iso) {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  const diff = (Date.now() - d.getTime()) / 1000;
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  return Math.floor(diff/86400) + 'd ago';
+}
+
+// --- Page Loaders ---
+
+async function loadPage(page) {
+  if (page === 'overview') loadOverview();
+  else if (page === 'conversations') loadConversations();
+  else if (page === 'customers') loadCustomers();
+  else if (page === 'tickets') loadTickets();
+  else if (page === 'copilot') loadCopilot();
+  else if (page === 'analytics') loadAnalytics();
+}
+
+async function loadOverview() {
+  const [stats, convos] = await Promise.all([
+    api('/api/analytics/overview'),
+    api('/api/conversations')
+  ]);
+  document.getElementById('overview-stats').innerHTML = `
+    <div class="stat-card"><div class="label">Active Conversations</div><div class="value" style="color:var(--accent)">${stats.active_conversations}</div></div>
+    <div class="stat-card"><div class="label">Avg Sentiment</div><div class="value">${sentimentDisplay(stats.avg_sentiment)}</div></div>
+    <div class="stat-card"><div class="label">Open Tickets</div><div class="value" style="color:var(--orange)">${stats.open_tickets}</div></div>
+    <div class="stat-card"><div class="label">At-Risk Customers</div><div class="value" style="color:var(--red)">${stats.at_risk_customers}</div></div>
+  `;
+  document.getElementById('overview-convos').innerHTML = convos.slice(0, 8).map(c => `
+    <tr class="clickable" onclick="viewConversation('${c.id}')">
+      <td>${c.customer_name || '-'}</td><td>${c.subject || '-'}</td>
+      <td>${statusBadge(c.status)}</td><td>${sentimentDisplay(c.sentiment_score)}</td>
+      <td>${c.assigned_to || '<span style="color:var(--text3)">Unassigned</span>'}</td>
+    </tr>
+  `).join('');
+
+  const tickets = await api('/api/tickets');
+  const counts = {urgent:0,high:0,medium:0,low:0};
+  tickets.filter(t => !['resolved','closed'].includes(t.status)).forEach(t => counts[t.priority]=(counts[t.priority]||0)+1);
+  document.getElementById('overview-tickets').innerHTML = Object.entries(counts).map(([p,c]) => `
+    <div class="metric-card"><div class="metric-value" style="color:${p==='urgent'||p==='high'?'var(--red)':p==='medium'?'var(--yellow)':'var(--green)'}">${c}</div><div class="metric-label">${p.toUpperCase()}</div></div>
+  `).join('');
+}
+
+async function loadConversations() {
+  const status = document.getElementById('conv-status-filter').value;
+  let url = '/api/conversations';
+  if (status) url += '?status=' + status;
+  const convos = await api(url);
+  document.getElementById('conv-table').innerHTML = convos.map(c => `
+    <tr class="clickable" onclick="viewConversation('${c.id}')">
+      <td>${c.customer_name || '-'}</td><td>${c.subject || '-'}</td>
+      <td>${c.channel}</td><td>${statusBadge(c.status)}</td>
+      <td>${sentimentDisplay(c.sentiment_score)}</td>
+      <td>${c.assigned_to || '-'}</td>
+    </tr>
+  `).join('');
+}
+
+let currentConvId = null;
+async function viewConversation(id) {
+  currentConvId = id;
+  const conv = await api('/api/conversations/' + id);
+  document.getElementById('conv-list-view').style.display = 'none';
+  document.getElementById('conv-detail-view').style.display = 'block';
+  document.getElementById('conv-thread').innerHTML = `
+    <div class="thread-header">
+      <h3>${conv.subject || 'Conversation'}</h3>
+      <div class="meta">${statusBadge(conv.status)} &nbsp; ${conv.customer_name || ''} &nbsp; ${sentimentDisplay(conv.sentiment_score)} &nbsp; ${conv.assigned_to ? 'Assigned: '+conv.assigned_to : 'Unassigned'}</div>
+    </div>
+    ${conv.messages.map(m => `
+      <div class="msg">
+        <div class="msg-avatar ${m.role}">${m.role[0].toUpperCase()}</div>
+        <div class="msg-body">
+          <div class="msg-role ${m.role}">${m.role === 'customer' ? 'Customer' : m.role === 'bot' ? 'Herald Bot' : 'Agent'}</div>
+          <div class="msg-text">${m.content}</div>
+          <div class="msg-time">${timeAgo(m.created_at)}</div>
+        </div>
+      </div>
+    `).join('')}
+  `;
+}
+
+function showConvList() {
+  document.getElementById('conv-list-view').style.display = 'block';
+  document.getElementById('conv-detail-view').style.display = 'none';
+  currentConvId = null;
+}
+
+async function sendReply() {
+  const input = document.getElementById('reply-input');
+  if (!input.value.trim() || !currentConvId) return;
+  // For demo, just add the message visually
+  const thread = document.getElementById('conv-thread');
+  thread.innerHTML += `
+    <div class="msg">
+      <div class="msg-avatar agent">A</div>
+      <div class="msg-body">
+        <div class="msg-role agent">Agent</div>
+        <div class="msg-text">${input.value}</div>
+        <div class="msg-time">just now</div>
+      </div>
+    </div>
+  `;
+  input.value = '';
+}
+
+async function loadCustomers() {
+  const plan = document.getElementById('cust-plan-filter').value;
+  const risk = document.getElementById('cust-risk-filter').value;
+  let url = '/api/customers?';
+  if (plan) url += 'plan=' + plan + '&';
+  if (risk) url += 'churn_risk=' + risk;
+  const custs = await api(url);
+  document.getElementById('cust-table').innerHTML = custs.map(c => `
+    <tr class="clickable" onclick="viewCustomer('${c.id}')">
+      <td><strong>${c.name}</strong><br><span style="color:var(--text2);font-size:12px">${c.email}</span></td>
+      <td>${c.company || '-'}</td>
+      <td>${planBadge(c.plan)}</td>
+      <td>${healthBar(c.health_score)}</td>
+      <td>${riskBadge(c.churn_risk)}</td>
+      <td>${timeAgo(c.last_active)}</td>
+    </tr>
+  `).join('');
+}
+
+async function viewCustomer(id) {
+  const cust = await api('/api/customers/' + id);
+  document.getElementById('cust-list-view').style.display = 'none';
+  document.getElementById('cust-detail-view').style.display = 'block';
+  document.getElementById('cust-detail').innerHTML = `
+    <div class="detail-panel">
+      <h3>${cust.name}</h3>
+      <div class="detail-row"><span class="detail-label">Email</span><span>${cust.email}</span></div>
+      <div class="detail-row"><span class="detail-label">Company</span><span>${cust.company || '-'}</span></div>
+      <div class="detail-row"><span class="detail-label">Plan</span><span>${planBadge(cust.plan)}</span></div>
+      <div class="detail-row"><span class="detail-label">Health Score</span><span>${healthBar(cust.health_score)}</span></div>
+      <div class="detail-row"><span class="detail-label">Churn Risk</span><span>${riskBadge(cust.churn_risk)}</span></div>
+      <div class="detail-row"><span class="detail-label">Conversations</span><span>${cust.total_conversations}</span></div>
+      <div class="detail-row"><span class="detail-label">Signed Up</span><span>${timeAgo(cust.signup_date)}</span></div>
+      <div class="detail-row"><span class="detail-label">Last Active</span><span>${timeAgo(cust.last_active)}</span></div>
+    </div>
+    <div class="section-title">Recent Conversations</div>
+    <div class="table-wrap"><table><thead><tr><th>Subject</th><th>Status</th><th>Sentiment</th></tr></thead><tbody>
+      ${(cust.recent_conversations||[]).map(c => `
+        <tr class="clickable" onclick="document.querySelector('[data-page=conversations]').click();setTimeout(()=>viewConversation('${c.id}'),100)">
+          <td>${c.subject || '-'}</td><td>${statusBadge(c.status)}</td><td>${sentimentDisplay(c.sentiment_score)}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="3" style="color:var(--text3)">No conversations</td></tr>'}
+    </tbody></table></div>
+    <div class="section-title">Open Tickets</div>
+    <div class="table-wrap"><table><thead><tr><th>Subject</th><th>Priority</th><th>Status</th></tr></thead><tbody>
+      ${(cust.open_tickets||[]).map(t => `
+        <tr><td>${t.subject}</td><td>${priorityBadge(t.priority)}</td><td>${statusBadge(t.status)}</td></tr>
+      `).join('') || '<tr><td colspan="3" style="color:var(--text3)">No open tickets</td></tr>'}
+    </tbody></table></div>
+  `;
+}
+
+function showCustList() {
+  document.getElementById('cust-list-view').style.display = 'block';
+  document.getElementById('cust-detail-view').style.display = 'none';
+}
+
+async function loadTickets() {
+  const status = document.getElementById('tkt-status-filter').value;
+  const priority = document.getElementById('tkt-priority-filter').value;
+  const category = document.getElementById('tkt-category-filter').value;
+  let url = '/api/tickets?';
+  if (status) url += 'status=' + status + '&';
+  if (priority) url += 'priority=' + priority + '&';
+  if (category) url += 'category=' + category;
+  const tickets = await api(url);
+
+  // Fetch customer names
+  const customers = await api('/api/customers');
+  const custMap = {};
+  customers.forEach(c => custMap[c.id] = c.name);
+
+  document.getElementById('tkt-table').innerHTML = tickets.map(t => `
+    <tr class="clickable" onclick="viewTicket('${t.id}')">
+      <td>${t.subject}</td>
+      <td>${custMap[t.customer_id] || t.customer_id}</td>
+      <td>${statusBadge(t.status)}</td>
+      <td>${priorityBadge(t.priority)}</td>
+      <td>${t.category ? badge(t.category, 'blue') : '-'}</td>
+      <td>${t.assigned_to || '-'}</td>
+      <td>${timeAgo(t.updated_at)}</td>
+    </tr>
+  `).join('');
+}
+
+async function viewTicket(id) {
+  const t = await api('/api/tickets');
+  const ticket = t.find(x => x.id === id);
+  if (!ticket) return;
+  document.getElementById('tkt-detail').style.display = 'block';
+  document.getElementById('tkt-detail').innerHTML = `
+    <div class="detail-panel">
+      <h3>${ticket.subject}</h3>
+      <div class="detail-row"><span class="detail-label">Status</span><span>${statusBadge(ticket.status)}</span></div>
+      <div class="detail-row"><span class="detail-label">Priority</span><span>${priorityBadge(ticket.priority)}</span></div>
+      <div class="detail-row"><span class="detail-label">Category</span><span>${ticket.category ? badge(ticket.category,'blue') : '-'}</span></div>
+      <div class="detail-row"><span class="detail-label">Assigned To</span><span>${ticket.assigned_to || 'Unassigned'}</span></div>
+      <div class="detail-row"><span class="detail-label">Description</span><span>${ticket.description || '-'}</span></div>
+      ${ticket.resolution_notes ? `<div class="detail-row"><span class="detail-label">Resolution</span><span>${ticket.resolution_notes}</span></div>` : ''}
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <select id="tkt-update-status"><option value="">Change Status</option><option value="open">Open</option><option value="in_progress">In Progress</option><option value="waiting">Waiting</option><option value="resolved">Resolved</option><option value="closed">Closed</option></select>
+        <button class="btn btn-primary btn-sm" onclick="updateTicket('${ticket.id}')">Update</button>
+      </div>
+    </div>
+  `;
+}
+
+async function updateTicket(id) {
+  const status = document.getElementById('tkt-update-status').value;
+  if (!status) return;
+  await api('/api/tickets/' + id, {method:'PATCH', body:JSON.stringify({status})});
+  loadTickets();
+  document.getElementById('tkt-detail').style.display = 'none';
+}
+
+async function loadCopilot() {
+  const convos = await api('/api/conversations?status=active');
+  const select = document.getElementById('copilot-conv-select');
+  select.innerHTML = '<option value="">Select a conversation...</option>' +
+    convos.map(c => `<option value="${c.id}">${c.customer_name || 'Unknown'}: ${c.subject || 'No subject'}</option>`).join('');
+}
+
+async function getSuggestions() {
+  const convId = document.getElementById('copilot-conv-select').value;
+  if (!convId) return;
+  document.getElementById('copilot-suggestions').innerHTML = '<p style="color:var(--text2)">Generating suggestions...</p>';
+
+  const result = await api('/api/copilot/suggest', {method:'POST', body:JSON.stringify({conversation_id:convId})});
+
+  if (result.context_used && result.context_used.length) {
+    document.getElementById('copilot-context').innerHTML = `
+      <div class="detail-panel"><h3>Context Used</h3>
+        ${result.context_used.map(c => `<span class="badge badge-blue" style="margin:2px">${c}</span>`).join('')}
+      </div>
+    `;
+  }
+
+  document.getElementById('copilot-suggestions').innerHTML = (result.suggestions || []).map(s => `
+    <div class="suggestion-card">
+      <div class="suggestion-text">${s.suggestion}</div>
+      <div class="suggestion-actions">
+        ${s.used ? '<span class="badge badge-green">Used</span>' :
+          `<button class="btn btn-success btn-sm" onclick="acceptSuggestion('${s.id}', this)">Use</button>`}
+      </div>
+    </div>
+  `).join('') || '<p style="color:var(--text2)">No suggestions generated.</p>';
+}
+
+async function acceptSuggestion(id, btn) {
+  await api('/api/copilot/accept', {method:'POST', body:JSON.stringify({suggestion_id:id})});
+  btn.parentElement.innerHTML = '<span class="badge badge-green">Used</span>';
+}
+
+async function loadAnalytics() {
+  const [overview, sentiment, churn, resolution] = await Promise.all([
+    api('/api/analytics/overview'),
+    api('/api/analytics/sentiment'),
+    api('/api/analytics/churn'),
+    api('/api/analytics/resolution')
+  ]);
+
+  document.getElementById('analytics-stats').innerHTML = `
+    <div class="stat-card"><div class="label">Total Resolved</div><div class="value" style="color:var(--green)">${resolution.total_resolved}</div></div>
+    <div class="stat-card"><div class="label">Avg Resolution</div><div class="value">${resolution.avg_hours}h</div></div>
+    <div class="stat-card"><div class="label">P50 Resolution</div><div class="value">${resolution.p50_hours}h</div></div>
+    <div class="stat-card"><div class="label">P95 Resolution</div><div class="value">${resolution.p95_hours}h</div></div>
+  `;
+
+  // Sentiment chart
+  const chart = document.getElementById('sentiment-chart');
+  if (sentiment.length) {
+    const maxAbs = Math.max(...sentiment.map(s => Math.abs(s.avg_sentiment)), 0.01);
+    chart.innerHTML = sentiment.map(s => {
+      const h = Math.abs(s.avg_sentiment) / maxAbs * 120;
+      const color = s.avg_sentiment >= 0 ? 'var(--green)' : 'var(--red)';
+      return `<div class="bar" style="height:${Math.max(h,4)}px;background:${color}" title="${s.date}: ${s.avg_sentiment}"><div class="bar-label">${s.date.slice(5)}</div></div>`;
+    }).join('');
+  } else {
+    chart.innerHTML = '<p style="color:var(--text3)">No sentiment data yet</p>';
+  }
+
+  // Churn donut
+  const churnEl = document.getElementById('churn-chart');
+  const total = (churn.risk_breakdown.low||0) + (churn.risk_breakdown.medium||0) + (churn.risk_breakdown.high||0);
+  if (total > 0) {
+    const pLow = (churn.risk_breakdown.low/total*100).toFixed(0);
+    const pMed = (churn.risk_breakdown.medium/total*100).toFixed(0);
+    const pHigh = (churn.risk_breakdown.high/total*100).toFixed(0);
+    const deg1 = churn.risk_breakdown.low/total*360;
+    const deg2 = deg1 + churn.risk_breakdown.medium/total*360;
+    churnEl.innerHTML = `
+      <div class="donut" style="background:conic-gradient(var(--green) 0deg ${deg1}deg, var(--yellow) ${deg1}deg ${deg2}deg, var(--red) ${deg2}deg 360deg)">
+        <div style="position:absolute;inset:25px;border-radius:50%;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700">${total}</div>
+      </div>
+      <div class="donut-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Low: ${churn.risk_breakdown.low} (${pLow}%)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div>Medium: ${churn.risk_breakdown.medium} (${pMed}%)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>High: ${churn.risk_breakdown.high} (${pHigh}%)</div>
+      </div>
+    `;
+  }
+
+  // Resolution by category
+  const resEl = document.getElementById('resolution-stats');
+  const cats = Object.entries(resolution.by_category || {});
+  if (cats.length) {
+    resEl.innerHTML = `<div class="metrics-grid">${cats.map(([cat, data]) => `
+      <div class="metric-card"><div class="metric-value">${data.avg_hours}h</div><div class="metric-label">${cat} (${data.count} tickets)</div></div>
+    `).join('')}</div>`;
+  } else {
+    resEl.innerHTML = '<p style="color:var(--text3)">No resolution data yet</p>';
+  }
+}
+
+// Filter listeners
+document.getElementById('conv-status-filter').addEventListener('change', loadConversations);
+document.getElementById('cust-plan-filter').addEventListener('change', loadCustomers);
+document.getElementById('cust-risk-filter').addEventListener('change', loadCustomers);
+document.getElementById('tkt-status-filter').addEventListener('change', loadTickets);
+document.getElementById('tkt-priority-filter').addEventListener('change', loadTickets);
+document.getElementById('tkt-category-filter').addEventListener('change', loadTickets);
+
+// Initial load
+loadOverview();
+</script>
+</body>
+</html>
